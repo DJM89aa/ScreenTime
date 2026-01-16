@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Screen Time Analyzer - Phase 2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section h2 {
+            font-size: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload label {
+            display: block;
+            padding: 30px;
+            background: #f5f7fa;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #667eea;
+        }
+
+        .file-upload label:hover {
+            background: #e8ecf1;
+            border-color: #764ba2;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+        }
+
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .button-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: #f5f7fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #999;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .results-section {
+            grid-column: 1 / -1;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f5f7fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #fafbfc;
+        }
+
+        .risk-low {
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .risk-medium {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .risk-high {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .warning-box strong {
+            color: #856404;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            border-radius: 4px;
+            color: #721c24;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            border-radius: 4px;
+            color: #155724;
+        }
+
+        .download-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .method-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #764ba2;
+            margin-bottom: 15px;
+        }
+
+        .method-box h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .method-box p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .risk-assessment {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+            margin-bottom: 15px;
+        }
+
+        .risk-assessment strong {
+            color: #333;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .risk-count {
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Active Screen Time Analyzer - Phase 2</h1>
+            <p>Intelligent masking detection & risk scoring for genuine engagement insights</p>
+        </div>
+
+        <div class="content">
+            <!-- Upload Section -->
+            <div class="section">
+                <h2>📁 Upload Data</h2>
+                
+                <div class="method-box">
+                    <h3>Phase 2 Features:</h3>
+                    <p>
+                        ✓ Excludes system/updates: msftconnecttest, windows updates, security checks<br>
+                        ✓ Filters by domain: Applies realistic duration thresholds<br>
+                        ✓ Duration filtering: Very short (&lt;1s) and &gt;2h sessions auto-excluded<br>
+                        ✓ Daily caps: Classroom max 5h/day, Discord 4h/day, YouTube 3h/day<br>
+                        ✓ Risk scoring: Gaming + Education simultaneous = HIGH RISK<br>
+                        ✓ Masking detection: 15 gaming/social domains flagged with education
+                    </p>
+                </div>
+
+                <div class="file-upload">
+                    <input type="file" id="csvFile" accept=".csv" />
+                    <label for="csvFile">
+                        <div>📤 Click to upload CSV or drag &amp; drop</div>
+                        <div class="file-name">CSV format: Start Time, End Time, Duration, User, Client IP, Host Name</div>
+                    </label>
+                </div>
+
+                <button class="button button-primary" id="analyzeBtn" disabled>Analyze Data</button>
+
+                <div class="warning-box">
+                    <strong>⚠️ Note:</strong> Processing happens locally in your browser. No data is sent anywhere.
+                </div>
+            </div>
+
+            <!-- Results Summary -->
+            <div class="section">
+                <h2>📈 Summary</h2>
+                <div id="summaryStats" class="stats-grid" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value" id="totalUsers">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Date Range</div>
+                        <div class="stat-value" id="dateRange" style="font-size: 14px;">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Daily Active</div>
+                        <div class="stat-value" id="avgDaily">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Active Hours</div>
+                        <div class="stat-value" id="totalHours">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Sessions Included</div>
+                        <div class="stat-value" id="sessionsIncluded">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Sessions Excluded</div>
+                        <div class="stat-value" id="sessionsExcluded">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Flagged Sessions</div>
+                        <div class="stat-value" id="flaggedSessions">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Risk Level</div>
+                        <div class="stat-value" id="overallRisk" style="font-size: 16px;">-</div>
+                    </div>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing your data...</p>
+                </div>
+
+                <div id="errorBox"></div>
+                <div id="successBox"></div>
+            </div>
+
+            <!-- User Daily Results -->
+            <div class="section results-section" id="userResultsSection">
+                <h2>👥 User Daily Active Time</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Date</th>
+                                <th>Active Time</th>
+                                <th>Sessions</th>
+                                <th>Risk Level</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userResultsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Domain Summary -->
+            <div class="section results-section" id="domainResultsSection">
+                <h2>🌐 Top Domains by Active Time</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Domain</th>
+                                <th>Total Time</th>
+                                <th>Sessions</th>
+                                <th>Avg Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="domainResultsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Risk Assessment Results -->
+            <div class="section results-section" id="riskResultsSection">
+                <h2>⚠️ Risk Assessment</h2>
+                <div id="riskAnalysis" class="risk-assessment"></div>
+            </div>
+
+            <!-- Download Section -->
+            <div class="section results-section" id="downloadSection">
+                <h2>⬇️ Export Results</h2>
+                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Download your analysis results:</p>
+                <div class="download-buttons">
+                    <button class="button button-primary" id="downloadCSVUser">📥 User Results (CSV)</button>
+                    <button class="button button-primary" id="downloadCSVDomain">📥 Domain Summary (CSV)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Phase 2: High-Masking-Risk Domains
+        const HIGH_MASKING_RISK = new Set([
+            'unblocked-games-free.com', 'crazygames.com', 'horrorgames.io', 'smashkarts.io',
+            'roblox.com', 'discord.com', 'discord.gg', 'snapchat.com', 'tiktok.com',
+            'instagram.com', 'reddit.com', 'twitter.com', 'x.com', 'twitch.tv', 'netflix.com'
+        ]);
+
+        // Phase 2: Educational Domains
+        const EDUCATIONAL_DOMAINS = new Set([
+            'classroom.cloud', 'century.tech', 'quizlet.com', 'senecalearning.com',
+            'duolingo.com', 'office365.com', 'sharepoint.com', 'teams.microsoft.com'
+        ]);
+
+        // Phase 2: Daily Domain Caps (in seconds)
+        const DAILY_DOMAIN_CAPS = {
+            'classroom.cloud': 5 * 3600,
+            'century.tech': 5 * 3600,
+            'quizlet.com': 3 * 3600,
+            'senecalearning.com': 4 * 3600,
+            'duolingo.com': 2 * 3600,
+            'discord.gg': 4 * 3600,
+            'discord.com': 4 * 3600,
+            'youtube.com': 3 * 3600,
+            'spotify.com': 8 * 3600,
+            'twitch.tv': 2 * 3600,
+        };
+
+        // Passive domains - mirror of Python analyzer
+        const PASSIVE_DOMAINS = new Set([
+            'msftconnecttest.com', 'msftncsi.com', 'windows.com', 'microsoft.com',
+            'cloud.microsoft', 'msftauth.net', 'msedge.net',
+            'pki.goog', 'gvt1.com', 'gvt2.com', 'gvt3.com', 'googleapis.com',
+            'ggpht.com', 'gstatic.com', 'ytimg.com',
+            'globalsign.com', 'digicert.com', 'securemetrics.com',
+            'windowsupdate.com', 'sophos.com', 'sophosxl.net',
+            'google-analytics.com', 'eyeo.com', 'polyfilljs.org',
+            'dell.com', 'azure-devices.net',
+            'doubleclick.net', 'scorecardresearch.com', 'consentmanager.net',
+            'id5-sync.com', 'googlesyndication.com', 'gumgum.com',
+            'undertone.com', 'ccgateway.net', 'rlcdn.com', 'media.net',
+            'doubleverify.com', 'appspot.com', 'addigy.com', 'grammarly.io',
+            'sentry.io', 'statuspage.io', 'mzstatic.com', 'googletagmanager.com',
+            'adtrafficquality.google', 'gamemonetize.com', 'px-cloud.net',
+            'nelreports.net', 'dotmetrics.net', 'dotomi.com', 'seedtag.com',
+            'permutive.app', 'teads.tv', 'ipredictive.com', 'stackadapt.com',
+            'casalemedia.com', 'pubmatic.com', 'openx.net', 'adnxs.com',
+            'rubiconproject.com', 'azureedge.net', 'azurewebsites.net',
+            'usercontent.microsoft', 'static.microsoft', 'googlevideo.com'
+        ]);
+
+        const DURATION_THRESHOLDS = {
+            'classroom.cloud': 30,
+            'century.tech': 60,
+            'office365.com': 300,
+            'office.com': 300,
+            'sharepoint.com': 300,
+            'microsoftonline.com': 120,
+            'skype.com': 5,
+            'google.com': 5,
+            'bing.com': 5,
+            'youtube.com': 1,
+            'spotify.com': 1,
+            'steampowered.com': 1,
+            'xboxlive.com': 1,
+            'xboxservices.com': 1,
+            'wcostream.com': 1,
+            'grammarly.com': 1,
+            'whatsapp.com': 1,
+            'snapchat.com': 1,
+            'live.com': 60,
+            'office.net': 300,
+            'raygun.io': 1,
+            'duolingo.com': 1,
+            'bbc.co.uk': 1,
+            'unity3d.com': 1,
+            'gaijin.net': 1,
+            'gaijinent.com': 1
+        };
+
+        const DEFAULT_THRESHOLD = 3;
+        const MAX_SESSION_DURATION = 2 * 3600; // 2 hours
+
+        let csvData = null;
+        let analysisResults = null;
+
+        // File upload handler
+        document.getElementById('csvFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    csvData = event.target.result;
+                    document.getElementById('analyzeBtn').disabled = false;
+                    document.querySelector('.file-name').textContent = `Selected: ${file.name}`;
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Parse CSV
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+                
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((header, idx) => {
+                    row[header] = values[idx] ? values[idx].trim() : '';
+                });
+                data.push(row);
+            }
+            return data;
+        }
+
+        // Time conversion
+        function timeToSeconds(timeStr) {
+            const parts = timeStr.split(':');
+            if (parts.length === 3) {
+                const [h, m, s] = parts.map(Number);
+                return h * 3600 + m * 60 + s;
+            }
+            return 0;
+        }
+
+        function secondsToHMS(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        // Check if session is passive
+        function isPassiveDomain(domain) {
+            return PASSIVE_DOMAINS.has(domain.toLowerCase());
+        }
+
+        // Should include session
+        function shouldIncludeSession(domain, durationSeconds) {
+            if (isPassiveDomain(domain)) return false;
+            if (durationSeconds < 1) return false;
+            if (durationSeconds > MAX_SESSION_DURATION) return false;
+
+            const threshold = DURATION_THRESHOLDS[domain.toLowerCase()] || DEFAULT_THRESHOLD;
+            return durationSeconds >= threshold;
+        }
+
+        // Phase 2: Calculate risk score
+        function calculateSessionRisk(domain, durationSeconds, userDailyData) {
+            let riskScore = 0;
+            const reasons = [];
+
+            // Gaming/Social domain + education on same day = FLAGGED
+            if (HIGH_MASKING_RISK.has(domain.toLowerCase())) {
+                const hasEducation = Object.keys(userDailyData).some(d => EDUCATIONAL_DOMAINS.has(d.toLowerCase()));
+                if (hasEducation) {
+                    riskScore += 40;
+                    reasons.push('Gaming/social with education');
+                }
+            }
+
+            // Session at 2-hour cap
+            if (durationSeconds >= 7200 - 60) {
+                riskScore += 20;
+                reasons.push('Session at 2-hour cap');
+            }
+
+            // Over daily domain cap
+            const dailyCap = DAILY_DOMAIN_CAPS[domain.toLowerCase()];
+            if (dailyCap && userDailyData[domain] && userDailyData[domain] > dailyCap) {
+                riskScore += 25;
+                reasons.push('Over daily domain cap');
+            }
+
+            return {
+                score: Math.min(100, riskScore),
+                level: riskScore >= 70 ? 'HIGH' : riskScore >= 40 ? 'MEDIUM' : 'LOW',
+                reasons: reasons
+            };
+        }
+
+        // Analyze data
+        document.getElementById('analyzeBtn').addEventListener('click', () => {
+            if (!csvData) return;
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('summaryStats').style.display = 'none';
+            document.getElementById('errorBox').innerHTML = '';
+            document.getElementById('successBox').innerHTML = '';
+
+            setTimeout(() => {
+                try {
+                    const rows = parseCSV(csvData);
+                    
+                    if (rows.length === 0) {
+                        showError('No data found in CSV file');
+                        return;
+                    }
+
+                    // Process data
+                    const userDaily = {};
+                    const domainSummary = {};
+                    const userDailyDomainUsage = {}; // Track domain usage per user per day
+                    let includedSessions = 0;
+                    let excludedSessions = 0;
+                    let flaggedSessions = 0;
+                    const riskCounts = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+
+                    rows.forEach(row => {
+                        const domain = row['Host Name'] || '';
+                        const user = row['User'] || '';
+                        const startTime = row['Start Time (UTC)'] || '';
+                        const durationStr = row['Duration'] || '00:00:00';
+                        
+                        const durationSeconds = timeToSeconds(durationStr);
+                        const isActive = shouldIncludeSession(domain, durationSeconds);
+
+                        if (isActive) {
+                            includedSessions++;
+
+                            // Extract date
+                            const datePart = startTime.split(' ')[0];
+                            const key = `${user}|${datePart}`;
+                            const domainUsageKey = `${user}|${datePart}|${domain}`;
+
+                            // Track daily domain usage for caps
+                            userDailyDomainUsage[domainUsageKey] = (userDailyDomainUsage[domainUsageKey] || 0) + durationSeconds;
+
+                            // Calculate risk for this session
+                            const userDomainData = {};
+                            Object.keys(userDailyDomainUsage).forEach(k => {
+                                const parts = k.split('|');
+                                if (parts[0] === user && parts[1] === datePart) {
+                                    userDomainData[parts[2]] = userDailyDomainUsage[k];
+                                }
+                            });
+
+                            const riskData = calculateSessionRisk(domain, durationSeconds, userDomainData);
+                            
+                            if (riskData.level !== 'LOW') {
+                                flaggedSessions++;
+                                riskCounts[riskData.level]++;
+                            } else {
+                                riskCounts.LOW++;
+                            }
+
+                            if (!userDaily[key]) {
+                                userDaily[key] = { user, date: datePart, seconds: 0, sessions: 0, riskLevel: 'LOW', riskScore: 0 };
+                            }
+                            userDaily[key].seconds += durationSeconds;
+                            userDaily[key].sessions += 1;
+                            // Update risk level to highest risk found
+                            if (riskData.score > userDaily[key].riskScore) {
+                                userDaily[key].riskScore = riskData.score;
+                                userDaily[key].riskLevel = riskData.level;
+                            }
+
+                            // Domain summary
+                            if (!domainSummary[domain]) {
+                                domainSummary[domain] = { seconds: 0, sessions: 0 };
+                            }
+                            domainSummary[domain].seconds += durationSeconds;
+                            domainSummary[domain].sessions += 1;
+                        } else {
+                            excludedSessions++;
+                        }
+                    });
+
+                    // Convert to arrays
+                    const userDailyArray = Object.values(userDaily)
+                        .sort((a, b) => a.user.localeCompare(b.user) || a.date.localeCompare(b.date));
+                    
+                    const domainArray = Object.entries(domainSummary)
+                        .map(([domain, data]) => ({
+                            domain,
+                            seconds: data.seconds,
+                            sessions: data.sessions
+                        }))
+                        .sort((a, b) => b.seconds - a.seconds);
+
+                    analysisResults = { userDaily: userDailyArray, domains: domainArray };
+
+                    // Display results
+                    displayResults(userDailyArray, domainArray, includedSessions, excludedSessions, rows.length, flaggedSessions, riskCounts);
+                    
+                    document.getElementById('loading').classList.remove('active');
+                    document.getElementById('summaryStats').style.display = 'grid';
+
+                    showSuccess(`✓ Analysis complete! Processed ${rows.length.toLocaleString()} sessions`);
+                    
+                } catch (error) {
+                    document.getElementById('loading').classList.remove('active');
+                    showError(`Error processing CSV: ${error.message}`);
+                }
+            }, 500);
+        });
+
+        function displayResults(userDaily, domains, included, excluded, total, flagged, riskCounts) {
+            // User results with risk levels
+            const userBody = document.getElementById('userResultsBody');
+            userBody.innerHTML = '';
+            userDaily.slice(0, 100).forEach(row => {
+                const tr = document.createElement('tr');
+                const riskClass = row.riskLevel === 'HIGH' ? 'risk-high' : row.riskLevel === 'MEDIUM' ? 'risk-medium' : 'risk-low';
+                
+                tr.innerHTML = `
+                    <td>${row.user}</td>
+                    <td>${row.date}</td>
+                    <td><strong>${secondsToHMS(row.seconds)}</strong></td>
+                    <td>${row.sessions}</td>
+                    <td><span class="${riskClass}">${row.riskLevel}</span></td>
+                `;
+                userBody.appendChild(tr);
+            });
+
+            // Domain results
+            const domainBody = document.getElementById('domainResultsBody');
+            domainBody.innerHTML = '';
+            domains.slice(0, 20).forEach(row => {
+                const tr = document.createElement('tr');
+                const avgSeconds = Math.round(row.seconds / row.sessions);
+                tr.innerHTML = `
+                    <td>${row.domain}</td>
+                    <td><strong>${secondsToHMS(row.seconds)}</strong></td>
+                    <td>${row.sessions}</td>
+                    <td>${secondsToHMS(avgSeconds)}</td>
+                `;
+                domainBody.appendChild(tr);
+            });
+
+            // Stats
+            const totalSeconds = userDaily.reduce((sum, row) => sum + row.seconds, 0);
+            const avgDaily = totalSeconds / Math.max(userDaily.length, 1);
+            const uniqueUsers = new Set(userDaily.map(r => r.user)).size;
+            
+            document.getElementById('totalUsers').textContent = uniqueUsers;
+            document.getElementById('dateRange').textContent = userDaily.length > 0 
+                ? `${userDaily[0].date} → ${userDaily[userDaily.length - 1].date}`
+                : '-';
+            document.getElementById('avgDaily').textContent = secondsToHMS(avgDaily);
+            document.getElementById('totalHours').textContent = (totalSeconds / 3600).toFixed(1) + 'h';
+            document.getElementById('sessionsIncluded').textContent = included.toLocaleString();
+            document.getElementById('sessionsExcluded').textContent = excluded.toLocaleString();
+            document.getElementById('flaggedSessions').textContent = flagged.toLocaleString();
+            
+            const overallRisk = riskCounts.HIGH > 0 ? 'HIGH' : riskCounts.MEDIUM > 0 ? 'MEDIUM' : 'LOW';
+            document.getElementById('overallRisk').textContent = overallRisk;
+
+            // Risk analysis
+            const riskHtml = `
+                <strong>Risk Summary:</strong><br>
+                <div class="risk-count">🔴 HIGH Risk: ${riskCounts.HIGH} sessions</div>
+                <div class="risk-count">🟡 MEDIUM Risk: ${riskCounts.MEDIUM} sessions</div>
+                <div class="risk-count">🟢 LOW Risk: ${riskCounts.LOW} sessions</div>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    <strong>HIGH:</strong> Gaming/social with education, sessions at 2h cap, overnight activity<br>
+                    <strong>MEDIUM:</strong> Possibly suspicious patterns, needs context<br>
+                    <strong>LOW:</strong> Likely genuine engagement
+                </div>
+            `;
+            document.getElementById('riskAnalysis').innerHTML = riskHtml;
+
+            // Show results sections
+            document.getElementById('userResultsSection').classList.add('active');
+            document.getElementById('domainResultsSection').classList.add('active');
+            document.getElementById('riskResultsSection').classList.add('active');
+            document.getElementById('downloadSection').classList.add('active');
+        }
+
+        function showError(msg) {
+            document.getElementById('errorBox').innerHTML = `<div class="error-box">${msg}</div>`;
+        }
+
+        function showSuccess(msg) {
+            document.getElementById('successBox').innerHTML = `<div class="success-box">${msg}</div>`;
+        }
+
+        // Download handlers
+        document.getElementById('downloadCSVUser').addEventListener('click', () => {
+            if (!analysisResults) return;
+            downloadCSV(analysisResults.userDaily, ['user', 'date', 'seconds', 'sessions', 'riskLevel'], 
+                ['User', 'Date', 'Active_Seconds', 'Session_Count', 'Risk_Level'], 'user_screentime.csv');
+        });
+
+        document.getElementById('downloadCSVDomain').addEventListener('click', () => {
+            if (!analysisResults) return;
+            downloadCSV(analysisResults.domains, ['domain', 'seconds', 'sessions'],
+                ['Domain', 'Total_Seconds', 'Session_Count'], 'domain_summary.csv');
+        });
+
+        function downloadCSV(data, fields, headers, filename) {
+            let csv = headers.join(',') + '\n';
+            data.forEach(row => {
+                const values = fields.map(f => row[f]);
+                csv += values.join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
+
